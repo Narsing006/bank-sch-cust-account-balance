@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:email="http://www.mulesoft.org/schema/mule/email"
+	xmlns:snowflake="http://www.mulesoft.org/schema/mule/snowflake"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/snowflake http://www.mulesoft.org/schema/mule/snowflake/current/mule-snowflake.xsd
+http://www.mulesoft.org/schema/mule/email http://www.mulesoft.org/schema/mule/email/current/mule-email.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<snowflake:snowflake-config name="Snowflake_Config" doc:name="Snowflake Config" doc:id="284f10e8-d8f2-4c71-9674-6ea9dff40515" >
+		<snowflake:snowflake-connection accountName="PTWXDSX-CF63578" warehouse="COMPUTE_WH" database="HOSPITALLOCATORDB" schema="PUBLIC" user="SINGSING" password="Narsing@12345678" role="ACCOUNTADMIN" />
+	</snowflake:snowflake-config>
+	<email:smtp-config name="Email_SMTP" doc:name="Email SMTP" doc:id="351c5db5-3e93-406e-97e0-9a8d61150774" >
+		<email:smtp-connection host="smtp.gmail.com" port="587" user="narsingbeesetti06@gmail.com" password="kejo yanz wjpo vnum" >
+			<email:properties >
+				<email:property key="mail.smtp.starttls.enable" value="true" />
+			</email:properties>
+		</email:smtp-connection>
+	</email:smtp-config>
+	<flow name="bank-sch-cust-account-balanceFlow" doc:id="bd49cb94-aec5-4544-ae5b-4d1f263dedc7" >
+		<scheduler doc:name="Scheduler" doc:id="cce4781d-1733-4125-92a0-32d4eace0690" >
+			<scheduling-strategy >
+				<fixed-frequency frequency="1" timeUnit="MINUTES"/>
+			</scheduling-strategy>
+		</scheduler>
+		<logger level="INFO" doc:name="Batch job is started" doc:id="702aa592-7e11-4992-968e-b6e8775a0343" message="-----------------------------------Batch job is started----------------------------------------"/>
+		<snowflake:select doc:name="select email" doc:id="2cea711b-c91c-4abc-8f8f-643ee020c364" config-ref="Snowflake_Config">
+			<snowflake:sql ><![CDATA[select * from bank_transactions;]]></snowflake:sql>
+		</snowflake:select>
+		<ee:transform doc:name="Payload" doc:id="a40cdcb4-d985-48fc-b6d7-0058914c16db">
+				<ee:message>
+					<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+		<foreach doc:name="For Each" doc:id="58d85101-85f4-4e21-af73-3642469fbc03" >
+			<logger level="INFO" doc:name="Before sending an email" doc:id="9f75b931-fb4c-409f-a2ea-077425dc4ce4" message="----------------------------------------Before sending an email-------------------------------------------"/>
+			<set-variable value='#["Your total balance as on Today is- " ++ payload.TOTALBALANCE]' doc:name="emailBody" doc:id="7190e214-c1fb-4f55-86b7-731e8f8bc573" variableName="emailBody"/>
+			<set-variable value="#[payload.MAILLD]" doc:name="email" doc:id="ea85faa0-8617-4c23-9d25-3a94d81d7592" variableName="email"/>
+			<set-variable value="#[payload.BANKNAME]" doc:name="bankName" doc:id="deea63d2-249c-4de7-bee7-fd753cbf1c59" variableName="bankName"/>
+			<parse-template doc:name="Parse Template" doc:id="81a6939c-96d0-4fdc-ac85-c26ce05b9205" location="html\email.template"/>
+			<email:send doc:name="Email Send" doc:id="23d24970-cfce-4ac6-bc60-32e950d14fbe" config-ref="Email_SMTP" fromAddress="narsingbeesetti06@gmail.com" subject='#["Todays Total Balance! " ++ vars.bankName]'>
+				<email:to-addresses >
+					<email:to-address value="#[vars.email]" />
+					<email:to-address value="saragadasekhar123@gmail.com" />
+					<email:to-address value="viswa.vasabattula09@gmail.com" />
+				</email:to-addresses>
+				<email:cc-addresses >
+					<email:cc-address value="#[vars.email]" />
+				</email:cc-addresses>
+				<email:body contentType="text/html">
+				</email:body>
+			</email:send>
+			<logger level="INFO" doc:name="email sent" doc:id="7265df86-c7fd-4002-9686-1ab35bd4df3a" message="----------------------------------Email sent to the user------------------------------------------#[vars.email]"/>
+			<logger level="INFO" doc:name="End Flow" doc:id="bd9610b8-08da-447e-88c2-e9ac2b9bff61" message="------------------------------End Flow----------------------"/>
+		</foreach>
+	</flow>
+</mule>
